@@ -341,7 +341,7 @@ For our example, that looks as follows:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
@@ -378,7 +378,7 @@ pipeline:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
@@ -419,7 +419,7 @@ pipeline:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
