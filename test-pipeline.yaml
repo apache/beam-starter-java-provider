@@ -1,0 +1,21 @@
+pipeline:
+  type: chain
+  transforms:
+    - type: Create
+      config:
+        elements:
+          - name: "john"
+            id: 1
+    - type: Identity
+    - type: ToUpperCase
+      config:
+        field: "name"
+    - type: LogForTesting
+
+providers:
+  - type: javaJar
+    config:
+      jar: "target/xlang-transforms-bundled-1.0-SNAPSHOT.jar"
+    transforms:
+      ToUpperCase: "some:urn:to_upper_case:v1"
+      Identity: "some:urn:transform_name:v1"
