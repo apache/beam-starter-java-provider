@@ -19,6 +19,19 @@
 
 # Tutorial for Beam YAML Java Providers
 
+<!-- TOC -->
+* [Tutorial for Beam YAML Java Providers](#tutorial-for-beam-yaml-java-providers)
+  * [Running the pipeline locally](#running-the-pipeline-locally)
+    * [Prerequisites](#prerequisites)
+    * [Getting started](#getting-started)
+      * [Run the pipeline](#run-the-pipeline)
+    * [Building the Transform Catalog JAR](#building-the-transform-catalog-jar)
+    * [Defining the Transform in Beam YAML](#defining-the-transform-in-beam-yaml)
+  * [Running the pipeline with a Dataflow](#running-the-pipeline-with-a-dataflow)
+  * [Renaming Provider](#renaming-provider)
+  * [Error Handling](#error-handling)
+<!-- TOC -->
+
 ## Running the pipeline locally
 
 ### Prerequisites
@@ -209,11 +222,29 @@ To run this example with `error_handling`, refer [here](#error-handling)
 The output can get a bit crowded, but look for the logs in the commented “Expected” section at the bottom of the YAML
 file.
 
-### Renaming Provider
+## Running the pipeline with a Dataflow
 
-The `renaming` provider allows us to map the transform parameters to alias names. 
-Otherwise the config parameters will inherit the same name that is defined in Java, with camelCase being converted to snake_case. 
-For example, errorHandling will be called `error_handling` in the YAML config. 
+You can submit a YAML pipeline to Dataflow by using the
+[gcloud CLI](https://cloud.google.com/sdk/gcloud). To create a Dataflow job
+from the YAML file, use the
+[`gcloud dataflow yaml run`](https://cloud.google.com/sdk/gcloud/reference/dataflow/yaml/run)
+command:
+
+```
+gcloud dataflow yaml run $JOB_NAME \
+  --yaml-pipeline-file=pipeline.yaml \
+  --region=$REGION
+```
+
+>**Note:** In this case you will need to upload your jar to a gcs bucket or
+publish it elsewhere as a globally-accessible URL so it is available to
+the dataflow service.
+
+## Renaming Provider
+
+The `renaming` provider allows us to map the transform parameters to alias names.
+Otherwise the config parameters will inherit the same name that is defined in Java, with camelCase being converted to snake_case.
+For example, errorHandling will be called `error_handling` in the YAML config.
 If there was a parameter `table_spec`, and we wanted to call in `table` in the YAML config. We could use the `renaming` provider to map the alias.
 
 For example,
@@ -254,10 +285,10 @@ In the above example, the field `table_id` will be called `table`, `instance_id`
 
 More examples on `renaming` provider can be found [here](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_io.yaml)
 
-### Error Handling
+## Error Handling
 
-Beam YAML has special support for “dead letter queue” pattern, if the transform supports a `error_handling` config parameter with an output field. 
-The output parameter is a name that must referenced as an input to another transform that will process the errors (e.g. by writing them out). 
+Beam YAML has special support for “dead letter queue” pattern, if the transform supports a `error_handling` config parameter with an output field.
+The output parameter is a name that must referenced as an input to another transform that will process the errors (e.g. by writing them out).
 For example, the following code will write all “good” processed records to one file and any “bad” records, along with metadata about what error was encountered, to a separate file.
 
 ```yaml
@@ -290,7 +321,7 @@ pipeline:
         path: /path/to/errors.json
 ```
 
-Note that with `error_handling` declared, `MapToFields.my_error_output` must be consumed; to ignore it will be an error. 
+Note that with `error_handling` declared, `MapToFields.my_error_output` must be consumed; to ignore it will be an error.
 Any use is fine, e.g. logging the bad records to stdout would be sufficient (though not recommended for a robust pipeline).
 
 Using the [test-pipeline](test-pipeline.yaml) with errors caught and handled:
@@ -323,21 +354,3 @@ providers:
       Identity: "some:urn:transform_name:v1"
 ```
 For complete guide on Error Handling, kindly refer to [Beam YAML Error Handling](https://beam.apache.org/documentation/sdks/yaml-errors/).
-
-## Running the pipeline with a Dataflow
-
-You can submit a YAML pipeline to Dataflow by using the
-[gcloud CLI](https://cloud.google.com/sdk/gcloud). To create a Dataflow job
-from the YAML file, use the
-[`gcloud dataflow yaml run`](https://cloud.google.com/sdk/gcloud/reference/dataflow/yaml/run)
-command:
-
-```
-gcloud dataflow yaml run $JOB_NAME \
-  --yaml-pipeline-file=pipeline.yaml \
-  --region=$REGION
-```
-
->**Note:** In this case you will need to upload your jar to a gcs bucket or
-publish it elsewhere as a globally-accessible URL so it is available to
-the dataflow service.
