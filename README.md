@@ -49,6 +49,8 @@ To complete this tutorial, you must have the following software installed:
 * Java 11 or later
 * Apache Maven 3.6 or later
 
+> **NOTE:** If you are new to Beam YAML, kindly follow this [guide](https://beam.apache.org/documentation/sdks/yaml/) to learn executing YAML pipelines.
+> To learn more about transform providers, visit YAML [providers](https://beam.apache.org/documentation/sdks/yaml-providers/).
 
 ## Overview
 
@@ -372,7 +374,7 @@ being converted to snake_case. For example, errorHandling will be called `error_
 parameter `table_spec`, and we wanted to call in `table` in the YAML config. We could use the `renaming` provider to map the alias.
 
 More robust examples of the `renaming` provider can be found [here](
-https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_providers.yaml).
+https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_io.yaml).
 
 Now, `ToUpperCase` can be defined as a transform in the Beam YAML pipeline with the single config parameter - `field`.
 
@@ -443,6 +445,8 @@ providers:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
 ```
+
+For Complete Reference on Error Handling, visit [Beam YAML Error Handling](https://beam.apache.org/documentation/sdks/yaml-errors/)
 
 If you have Beam Python installed, you can test this pipeline out locally with
 

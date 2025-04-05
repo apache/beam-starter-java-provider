@@ -22,9 +22,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: [ "version-update:semver-patch" ]
-#    reviewers:
-#      - "apache/beam"
-#      - "liferoad"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
