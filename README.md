@@ -1,3 +1,22 @@
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+
 # Creating a Beam Java Transform Catalog and Using in Beam YAML
 
 <!-- TOC -->
@@ -30,6 +49,8 @@ To complete this tutorial, you must have the following software installed:
 * Java 11 or later
 * Apache Maven 3.6 or later
 
+> **NOTE:** If you are new to Beam YAML, kindly follow this [guide](https://beam.apache.org/documentation/sdks/yaml/) to learn executing YAML pipelines.
+> To learn more about transform providers, visit YAML [providers](https://beam.apache.org/documentation/sdks/yaml-providers/).
 
 ## Overview
 
@@ -53,9 +74,9 @@ There are four main steps to follow:
    which provides an identifier used to refer to this transform later as well
    as metadata like a human-readable description and its configuration parameters.
 3. Build a Jar that contains these classes and vends them via the
-   [Service Loader](https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/ToUpperCaseTransformProvider.java#L30)
+   [Service Loader](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L30)
    infrastructure.
-4. Write a [provider specification](https://beam.apache.org/documentation/sdks/yaml/#providers)
+4. Write a [provider specification](https://beam.apache.org/documentation/sdks/yaml-providers/)
    that tells Beam YAML where to find this jar and what it contains.
 
 ## Project Structure
@@ -120,7 +141,7 @@ allowing us to focus on the transform functionality itself.
 
 ### SchemaTransformProvider Skeleton Code
 
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L1-L96
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L1-L96
 
 This is the bare minimum code (excluding import and package) to create a `SchemaTransformProvider` that can be used by
 the cross-language framework, and therefore allowing the `SchemaTransform` defined within it to be defined in any
@@ -132,7 +153,7 @@ Let’s start by breaking down the top-level methods that are required to be com
 
 
 #### configurationClass()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L27-L30
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L27-L30
 
 The <code>[configurationClass()](
 https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#configurationSchema--)</code>
@@ -141,7 +162,7 @@ the Transform. The <code>Configuration</code> class we defined in the skeleton c
 
 
 #### identifier()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L32-L35
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L32-L35
 
 The <code>[identifier()](
 https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#identifier--)</code>
@@ -151,7 +172,7 @@ are defined in a custom catalog such as this.
 
 
 #### inputCollectionNames()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L42-L45
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L42-L45
 
 The <code>[inputCollectionNames()](
 https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#inputCollectionNames--)</code>
@@ -163,7 +184,7 @@ the macros defined at the top of the file.
 
 
 #### outputCollectionNames()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L47-L50
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L47-L50
 
 The <code>[outputCollectionNames()](
 https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#outputCollectionNames--)</code>
@@ -176,7 +197,7 @@ the macros defined at the top of the file.
 
 
 #### from()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L52-L55
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L52-L55
 
 The <code>[from()](
 https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#from-org.apache.beam.sdk.values.Row-)</code>
@@ -192,10 +213,10 @@ which defines the expansion of the transform and includes the
 <code>[DoFn](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html)</code>.
 
 #### description()
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/SkeletonSchemaProvider.java#L37-L40
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L37-L40
 
 The *optional* <code>[description()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#description–)</code>
+https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#description--)</code>
 method is where a description of the transform can be written. This description is largely unused by the Beam YAML
 framework, but is useful for generating docs when used in conjunction with the
 [generate_yaml_docs.py](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/generate_yaml_docs.py)
@@ -205,7 +226,7 @@ script. This is useful when generating docs for a transform catalog. For example
 
 
 ### ToUpperCaseProvider Configuration Class
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/ToUpperCaseTransformProvider.java#L72-L100
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L72-L100
 
 The `Configuration` class is responsible for defining the parameters to the transform. This
 <code>[AutoValue](https://github.com/google/auto/tree/main/value)</code> class is annotated with the
@@ -254,13 +275,13 @@ required *if* parameter B is specified).
 
 
 ### ToUpperCaseProvider SchemaTransform Class
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/ToUpperCaseTransformProvider.java#L102-L179
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L102-L179
 
 This is the class that will define the actual transform that is performed on the incoming
 <code>[PCollection](https://beam.apache.org/documentation/programming-guide/#pcollections)</code>. Let’s first take a
 look at the <code>expand()</code> function.
 
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/ToUpperCaseTransformProvider.java#L141-L177
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L141-L177
 
 Every incoming
 <code>[PCollectionRowTuple](
@@ -297,7 +318,7 @@ Finally, the resulting `PCollectionRowTuple` must be constructed. The successful
 the same `PCollectionRowTuple `and tagged according to the output specified by the `error_handling `config in the
 Beam YAML pipeline.
 
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/src/main/java/org/example/ToUpperCaseTransformProvider.java#L116-L139
+https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L116-L139
 
 Now, taking a look at the `createDoFn()` method that is responsible for constructing and returning the actual
 <code>[DoFn](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html)</code>,
@@ -324,13 +345,13 @@ This will create a JAR under `target` called `xlang-transforms-bundled-1.0-SNAPS
 service is what will be invoked by the Beam YAML SDK to import the transform schema and run the expansion service for
 the transform.
 
-https://github.com/Polber/beam-yaml-xlang/blob/95abf0864e313232a89f3c9e57b950d0fb478979/pom.xml#L85-L87
+https://github.com/apache/beam-starter-java-provider/blob/main/pom.xml#L85-L87
 **Note:** The name of the jar is configurable using the `finalName` tag in the `maven-shade-plugin` configuration.
 
 ## Defining the Transform in Beam YAML
 
 Now that you have a JAR file that contains the transform catalog, it is time to include it as part of your Beam YAML
-pipeline. This is done using <code>[providers](https://beam.apache.org/documentation/sdks/yaml/#providers)</code> -
+pipeline. This is done using <code>[providers](https://beam.apache.org/documentation/sdks/yaml-providers)</code> -
 these providers allow one to define a suite of transforms in a given JAR or python package that can be used within the
 Beam YAML pipeline.
 
@@ -341,7 +362,7 @@ For our example, that looks as follows:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
@@ -353,7 +374,7 @@ being converted to snake_case. For example, errorHandling will be called `error_
 parameter `table_spec`, and we wanted to call in `table` in the YAML config. We could use the `renaming` provider to map the alias.
 
 More robust examples of the `renaming` provider can be found [here](
-https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_providers.yaml).
+https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_io.yaml).
 
 Now, `ToUpperCase` can be defined as a transform in the Beam YAML pipeline with the single config parameter - `field`.
 
@@ -378,7 +399,7 @@ pipeline:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
@@ -419,11 +440,13 @@ pipeline:
 providers:
   - type: javaJar
     config:
-      jar: xlang-transforms-bundled-1.0-SNAPSHOT.jar
+      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
 ```
+
+For Complete Reference on Error Handling, visit [Beam YAML Error Handling](https://beam.apache.org/documentation/sdks/yaml-errors/)
 
 If you have Beam Python installed, you can test this pipeline out locally with
 
