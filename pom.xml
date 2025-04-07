@@ -33,7 +33,7 @@
         <beam.version>2.63.0</beam.version>
         <autovalue.version>1.11.0</autovalue.version>
         <autovalue.service.version>1.1.1</autovalue.service.version>
-        <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
     </properties>
 
     <dependencyManagement>
