@@ -20,6 +20,7 @@
 # Creating a Beam Java Transform Catalog and Using in Beam YAML
 
 <!-- TOC -->
+
 * [Creating a Beam Java Transform Catalog and Using in Beam YAML](#creating-a-beam-java-transform-catalog-and-using-in-beam-yaml)
   * [Prerequisites](#prerequisites)
   * [Overview](#overview)
@@ -28,24 +29,25 @@
     * [Minimal pom.xml](#minimal-pomxml)
   * [Writing the External Transform](#writing-the-external-transform)
     * [SchemaTransformProvider Skeleton Code](#schematransformprovider-skeleton-code)
-      * [configurationClass()](#configurationclass)
-      * [identifier()](#identifier)
-      * [inputCollectionNames()](#inputcollectionnames)
-      * [outputCollectionNames()](#outputcollectionnames)
-      * [from()](#from)
-      * [description()](#description)
-    * [ToUpperCaseProvider Configuration Class](#touppercaseprovider-configuration-class)
-      * [Error Handling](#error-handling)
-      * [Validation](#validation)
-    * [ToUpperCaseProvider SchemaTransform Class](#touppercaseprovider-schematransform-class)
+      * [`configurationClass()`](#configurationclass)
+      * [`identifier()`](#identifier)
+      * [`inputCollectionNames()`](#inputcollectionnames)
+      * [`outputCollectionNames()`](#outputcollectionnames)
+      * [`from()`](#from)
+      * [`description()`](#description)
+      * [ToUpperCaseProvider Configuration Class](#touppercaseprovider-configuration-class)
+        * [Error Handling](#error-handling)
+        * [Validation](#validation)
+      * [ToUpperCaseProvider SchemaTransform Class](#touppercaseprovider-schematransform-class)
   * [Building the Transform Catalog JAR](#building-the-transform-catalog-jar)
   * [Defining the Transform in Beam YAML](#defining-the-transform-in-beam-yaml)
-<!-- TOC -->
 
+<!-- /TOC -->
 
 ## Prerequisites
 
 To complete this tutorial, you must have the following software installed:
+
 * Java 11 or later
 * Apache Maven 3.6 or later
 
@@ -54,334 +56,202 @@ To complete this tutorial, you must have the following software installed:
 
 ## Overview
 
-The purpose of this tutorial is to introduce the fundamental concepts of the
-[Cross-Language](https://beam.apache.org/documentation/programming-guide/#multi-language-pipelines) framework that is
-leveraged by [Beam YAML](https://beam.apache.org/documentation/sdks/yaml/) to allow a user to specify Beam Java
-transforms through the use of transform [providers](https://beam.apache.org/documentation/sdks/yaml/#providers) such
-that the transforms can be easily defined in a Beam YAML pipeline.
+The purpose of this tutorial is to introduce the fundamental concepts of the [Cross-Language](https://beam.apache.org/documentation/programming-guide/#multi-language-pipelines) framework that is leveraged by [Beam YAML](https://beam.apache.org/documentation/sdks/yaml/) to allow a user to specify Beam Java transforms through the use of transform [providers](https://beam.apache.org/documentation/sdks/yaml/#providers) such that the transforms can be easily defined in a Beam YAML pipeline.
 
-As we walk through these concepts, we will be constructing a Transform called `ToUpperCase` that will take in a single
-parameter `field`, which represents a field in the collection of elements, and modify that field by converting the
-string to uppercase.
+As we walk through these concepts, we will be constructing a Transform called `ToUpperCase` that will take in a single parameter `field`, which represents a field in the collection of elements, and modify that field by converting the string to uppercase.
 
 There are four main steps to follow:
 
-1. Define the transformation itself as a
-   [PTransform](https://beam.apache.org/documentation/programming-guide/#composite-transforms)
-   that consumes and produces any number of schema'd PCollections.
-2. Expose this transform via a
-   [SchemaTransformProvider](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html)
-   which provides an identifier used to refer to this transform later as well
-   as metadata like a human-readable description and its configuration parameters.
-3. Build a Jar that contains these classes and vends them via the
-   [Service Loader](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L30)
-   infrastructure.
-4. Write a [provider specification](https://beam.apache.org/documentation/sdks/yaml-providers/)
-   that tells Beam YAML where to find this jar and what it contains.
+1.  Define the transformation itself as a [PTransform](https://beam.apache.org/documentation/programming-guide/#composite-transforms) that consumes and produces any number of schema'd PCollections.
+2.  Expose this transform via a [SchemaTransformProvider](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html) which provides an identifier used to refer to this transform later as well as metadata like a human-readable description and its configuration parameters.
+3.  Build a Jar that contains these classes and vends them via the [Service Loader](https://docs.oracle.com/javase/tutorial/ext/basics/spi.html) infrastructure (see [example](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L30)).
+4.  Write a [provider specification](https://beam.apache.org/documentation/sdks/yaml-providers/) that tells Beam YAML where to find this jar and what it contains.
 
 ## Project Structure
 
 The project structure for this tutorial is as follows:
-```
-MyExternalTransforms
+
+```text
+MyExternalTransforms/
 ├── pom.xml
-└── src
-    └── main
-        └── java
-            └── org
-                └── example
+└── src/
+    └── main/
+        └── java/
+            └── org/
+                └── example/
                     ├── ToUpperCaseTransformProvider.java
                     └── SkeletonSchemaProvider.java
 ```
 
 Here is a brief description of each file:
-* **pom.xml:** The Maven project configuration file.
-* **SkeletonSchemaProvider.java:** The Java class that contains the bare-minimum skeleton code for implementing a
-`SchemaTransform` Identity function.
-* **ToUpperCaseTransformProvider.java:** The Java class that contains the `SchemaTransform` to be used in the Beam YAML
-pipeline. This project structure assumes that the java module is `org.example`, but any module path can be used so long
-as the project structure matches.
 
+* **pom.xml:** The Maven project configuration file.
+* **SkeletonSchemaProvider.java:** The Java class that contains the bare-minimum skeleton code for implementing a `SchemaTransform` Identity function.
+* **ToUpperCaseTransformProvider.java:** The Java class that contains the `SchemaTransform` to be used in the Beam YAML pipeline. This project structure assumes that the java module is `org.example`, but any module path can be used so long as the project structure matches.
 
 ## Creating the pom.xml file
 
-A `pom.xml` file, which stands for Project Object Model, is an essential file used in Maven projects. It's an XML file
-that contains all the critical information about a project, including its configuration details for Maven to build it
-successfully.  This file specifies things like the project's name, version, dependencies on other libraries, and how
-the project should be packaged (e.g., JAR file).
+A `pom.xml` file, which stands for Project Object Model, is an essential file used in Maven projects. It's an XML file that contains all the critical information about a project, including its configuration details for Maven to build it successfully. This file specifies things like the project's name, version, dependencies on other libraries, and how the project should be packaged (e.g., JAR file).
 
-Since this tutorial won’t cover all the details about Maven and `pom.xml`, here's a link to the official documentation
-for more details: https://maven.apache.org/pom.html
-
+Since this tutorial won’t cover all the details about Maven and `pom.xml`, here's a link to the official documentation for more details: [https://maven.apache.org/pom.html](https://maven.apache.org/pom.html)
 
 ### Minimal pom.xml
 
 A minimal `pom.xml` file can be found in the project repo [here](pom.xml).
 
-
 ## Writing the External Transform
 
-Writing a transform that is compatible with the Beam YAML framework requires leveraging Beam’s
-[cross-language](https://beam.apache.org/documentation/programming-guide/#multi-language-pipelines) framework, and more
-specifically, the <code> [SchemaTransformProvider](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html)</code>
-interface (and even *more* specifically, the <code> [TypedSchemaTransformProvider](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/TypedSchemaTransformProvider.html)</code>
-interface).
+Writing a transform that is compatible with the Beam YAML framework requires leveraging Beam’s [cross-language](https://beam.apache.org/documentation/programming-guide/#multi-language-pipelines) framework, and more specifically, the [`SchemaTransformProvider`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html) interface (and even *more* specifically, the [`TypedSchemaTransformProvider`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/TypedSchemaTransformProvider.html) interface).
 
-This framework relies on creating a
-<code>[PTransform](https://beam.apache.org/documentation/programming-guide/#transforms)</code> that operates solely on
-<code>[Beam Row](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/Row.html)</code>’s -
-a schema-aware data type built into Beam that is capable of being translated across SDK’s. Leveraging the
-<code>[SchemaTransformProvider](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html)</code>
-interface removes the need to write a lot of the boilerplate code required to translate data across the SDK’s,
-allowing us to focus on the transform functionality itself.
-
+This framework relies on creating a [`PTransform`](https://beam.apache.org/documentation/programming-guide/#transforms) that operates solely on [Beam `Row`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/Row.html)’s - a schema-aware data type built into Beam that is capable of being translated across SDK’s. Leveraging the [`SchemaTransformProvider`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html) interface removes the need to write a lot of the boilerplate code required to translate data across the SDK’s, allowing us to focus on the transform functionality itself.
 
 ### SchemaTransformProvider Skeleton Code
 
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L1-L96
+See [`SkeletonSchemaProvider.java`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L1-L96) for the full code.
 
-This is the bare minimum code (excluding import and package) to create a `SchemaTransformProvider` that can be used by
-the cross-language framework, and therefore allowing the `SchemaTransform` defined within it to be defined in any
-Beam YAML pipeline. In this case, the transform will act as an Identity function and will output the input collection
-of elements with no alteration.
+This is the bare minimum code (excluding import and package) to create a `SchemaTransformProvider` that can be used by the cross-language framework, allowing the `SchemaTransform` defined within it to be used in any Beam YAML pipeline. In this case, the transform acts as an Identity function, outputting the input collection of elements without alteration.
 
-Let’s start by breaking down the top-level methods that are required to be compatible with the
-`SchemaTransformProvider` interface.
+Let’s start by breaking down the top-level methods required by the `SchemaTransformProvider` interface.
 
+#### `configurationClass()`
 
-#### configurationClass()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L27-L30
+See [`SkeletonSchemaProvider.java#L27-L30`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L27-L30).
 
-The <code>[configurationClass()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#configurationSchema--)</code>
-method is responsible for telling the cross-language framework which Java class defines the input parameters to
-the Transform. The <code>Configuration</code> class we defined in the skeleton code will be revisited in depth later.
+The [`configurationClass()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#configurationSchema--) method tells the cross-language framework which Java class defines the input parameters for the Transform. The `Configuration` class (defined in the skeleton code) will be discussed in more detail later.
 
+#### `identifier()`
 
-#### identifier()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L32-L35
+See [`SkeletonSchemaProvider.java#L32-L35`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L32-L35).
 
-The <code>[identifier()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#identifier--)</code>
-method defines a unique identifier for the Transform. It is important to ensure that this name does not collide with
-any other Transform URN that will be given to the External Transform service, both those built-in to Beam, and any that
-are defined in a custom catalog such as this.
+The [`identifier()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#identifier--) method defines a unique identifier (URN) for the Transform. Ensure this name doesn't collide with other Transform URNs, including built-in Beam transforms and any others defined in custom catalogs.
 
+#### `inputCollectionNames()`
 
-#### inputCollectionNames()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L42-L45
+See [`SkeletonSchemaProvider.java#L42-L45`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L42-L45).
 
-The <code>[inputCollectionNames()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#inputCollectionNames--)</code>
-method returns a list of expected input names for the tagged input collections. In most cases, especially in Beam YAML,
-there will be a collection of input elements that are tagged “input”. It is acceptable to use different names
-in this method as it is not actually used as a contract between SDK's, but what is important to note is that Beam YAML
-will be sending a collection that is tagged "input" to the transform. It is best to use this method definition with
-the macros defined at the top of the file.
+The [`inputCollectionNames()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#inputCollectionNames--) method returns a list of expected input names for the tagged input collections. In Beam YAML, the primary input collection is typically tagged `"input"`. While different names can be used here (as it's not a strict contract between SDKs), Beam YAML sends the collection tagged `"input"`. It's best practice to return `INPUT_TAG` (defined in the example code).
 
+#### `outputCollectionNames()`
 
-#### outputCollectionNames()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L47-L50
+See [`SkeletonSchemaProvider.java#L47-L50`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L47-L50).
 
-The <code>[outputCollectionNames()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#outputCollectionNames--)</code>
-method returns a list of output names for the tagged output collections. Similar to
-<code>inputCollectionNames()</code>, there will be a collection of output elements that are tagged “output”, but in
-most cases, there will also be a subset of elements tagged with whatever was defined in the
-<code>[error_handling](https://beam.apache.org/documentation/sdks/yaml-errors/)</code> section of the transform config
-in Beam YAML. Since this method is also not used as a contract, it is best to use this method definition with
-the macros defined at the top of the file.
+The [`outputCollectionNames()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#outputCollectionNames--) method returns a list of output names for the tagged output collections. Similar to `inputCollectionNames()`, the primary output is usually tagged `"output"`. If [error handling](https://beam.apache.org/documentation/sdks/yaml-errors/) is configured in Beam YAML, there might also be an error output collection tagged according to the `error_handling` configuration. It's best practice to return `OUTPUT_TAG` and `ERROR_TAG` (defined in the example code).
 
+#### `from()`
 
-#### from()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L52-L55
+See [`SkeletonSchemaProvider.java#L52-L55`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L52-L55).
 
-The <code>[from()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#from-org.apache.beam.sdk.values.Row-)</code>
-method is the method that is responsible for returning the
-<code>[SchemaTransform](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransform.html)</code>
-itself. This transform is the
-<code>[PTransform](https://beam.apache.org/documentation/programming-guide/#transforms)</code> that will actually
-perform the transform on the incoming collection of elements. Since it is a PTransform, it requires one method -
-<code>[expand()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/PTransform.html#expand-InputT-)</code>
-which defines the expansion of the transform and includes the
-<code>[DoFn](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html)</code>.
+The [`from()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#from-org.apache.beam.sdk.values.Row-) method returns the [`SchemaTransform`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransform.html) instance itself. This transform is a [`PTransform`](https://beam.apache.org/documentation/programming-guide/#transforms) that performs the actual operation on the incoming collection(s). As a `PTransform`, it requires an [`expand()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/PTransform.html#expand-InputT-) method, which defines the transform's logic, often including a [`DoFn`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html).
 
-#### description()
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L37-L40
+#### `description()`
 
-The *optional* <code>[description()](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#description--)</code>
-method is where a description of the transform can be written. This description is largely unused by the Beam YAML
-framework, but is useful for generating docs when used in conjunction with the
-[generate_yaml_docs.py](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/generate_yaml_docs.py)
-script. This is useful when generating docs for a transform catalog. For example, the
-[Beam YAML transform glossary](https://beam.apache.org/releases/yamldoc/current/).
+See [`SkeletonSchemaProvider.java#L37-L40`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/SkeletonSchemaProvider.java#L37-L40).
 
-
+The *optional* [`description()`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransformProvider.html#description--) method provides a human-readable description of the transform. While largely unused by the Beam YAML framework itself, it's valuable for documentation generation, especially when used with the [`generate_yaml_docs.py`](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/generate_yaml_docs.py) script (e.g., for the [Beam YAML transform glossary](https://beam.apache.org/releases/yamldoc/current/)).
 
 ### ToUpperCaseProvider Configuration Class
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L72-L100
 
-The `Configuration` class is responsible for defining the parameters to the transform. This
-<code>[AutoValue](https://github.com/google/auto/tree/main/value)</code> class is annotated with the
-<code>[AutoValueSchema](
-https://beam.apache.org/releases/javadoc/2.29.0/org/apache/beam/sdk/schemas/AutoValueSchema.html)</code> interface to
-generate the schema for the transform. This interface scrapes the inputs by using all the getter methods. In our
-<code>ToUpperCase</code> example, there is one input parameter, <code>field</code>, that specifies the field in the
-input collection to perform the operation on. So, we define a getter method, <code>getField</code>, that will tell the
-<code>AutoValueSchema</code> class about our input parameter.
+See [`ToUpperCaseTransformProvider.java#L72-L100`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L72-L100).
 
-Likewise, the `Configuration` class needs a `Builder` subclass annotated with
-<code>[AutoValue.Builder](https://github.com/google/auto/blob/main/value/userguide/builders.md)</code> so that the
-<code>AutoValue</code> class can be instantiated. This builder needs a setter method for each subsequent getter method
-in the parent class.
+The `Configuration` class defines the parameters for the transform.
 
-Optional parameters should be annotated with the `@Nullable` annotation. Required parameters, therefore, should omit
-this annotation.
-
-The `@SchemaFieldDescription` annotation can also be optionally used to define the parameter. This is also passed to
-the Beam YAML framework and can be used in conjunction with the
-[generate_yaml_docs.py](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/generate_yaml_docs.py)
-script to generate docs for the transform. This is useful when generating docs for a transform catalog. For example,
-the [Beam YAML transform glossary](https://beam.apache.org/releases/yamldoc/current/).
-
+*   It's typically an [`AutoValue`](https://github.com/google/auto/tree/main/value) class annotated with [`@AutoValueSchema`](https://beam.apache.org/releases/javadoc/2.29.0/org/apache/beam/sdk/schemas/AutoValueSchema.html) to automatically generate the Beam schema.
+*   The schema is derived from the getter methods (e.g., `getField()` for a `field` parameter).
+*   A `Builder` subclass annotated with [`@AutoValue.Builder`](https://github.com/google/auto/blob/main/value/userguide/builders.md) is needed for instantiation, with setter methods corresponding to the getters.
+*   Optional parameters should have their getter methods annotated with `@Nullable`. Required parameters omit this annotation.
+*   The `@SchemaFieldDescription` annotation can optionally provide descriptions for parameters, useful for documentation generation (as mentioned for `description()`).
 
 #### Error Handling
 
-In Beam YAML, there is a built-in [error handling](https://beam.apache.org/documentation/sdks/yaml-errors/) framework
-that allows a transform to consume the error output from a transform, both in the turnkey Beam YAML transforms and in
-compatible External Transforms. This error output could be any `Exceptions` that are caught and tagged, or any custom
-logic that would cause an element to be treated as an error.
-
-To make a transform compatible with this framework, one must take the
-<code>[ErrorHandling](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/providers/ErrorHandling.html)</code>
-object as an input to the transform, and therefore define it in this `Configuration`.
-
+To support Beam YAML's built-in [error handling](https://beam.apache.org/documentation/sdks/yaml-errors/) framework, the `Configuration` class must include a parameter of type [`ErrorHandling`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/providers/ErrorHandling.html). This allows the transform to receive error handling configuration (like the output tag for errors) from the YAML pipeline and conditionally catch exceptions or route specific elements to the error output.
 
 #### Validation
 
-One last optional method for the `Configuration` class is the `validate()` method. This method is responsible for
-checking the input parameters to the transform. In our example, we assume there is a field `metadata` in the input
-collection that cannot be modified. So, we perform a check on the `field` parameter to verify the user is not
-attempting to modify this field. This method can also be useful for checking dependent inputs, (i.e. parameter A is
-required *if* parameter B is specified).
+An optional `validate()` method can be added to the `Configuration` class for input parameter validation. This is useful for:
 
+* Checking individual parameter constraints (e.g., ensuring a field name isn't a reserved name).
+* Validating dependencies between parameters (e.g., parameter A is required *if* parameter B is specified).
 
 ### ToUpperCaseProvider SchemaTransform Class
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L102-L179
 
-This is the class that will define the actual transform that is performed on the incoming
-<code>[PCollection](https://beam.apache.org/documentation/programming-guide/#pcollections)</code>. Let’s first take a
-look at the <code>expand()</code> function.
+See [`ToUpperCaseTransformProvider.java#L102-L179`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L102-L179).
 
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L141-L177
+This class implements the [`SchemaTransform`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/SchemaTransform.html) interface and contains the core logic within its `expand()` method.
 
-Every incoming
-<code>[PCollectionRowTuple](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/PCollectionRowTuple.html)</code> is
-essentially a tagged collection. As stated before, in most cases, with context to Beam YAML, there will only be one
-tag, “input”. To get the <code>PCollection</code> of <code>Row </code>elements, we first need to unpack these from
-the <code>PCollectionRowTuple</code> using the “input” tag.
+**`expand()` Method:** ([`ToUpperCaseTransformProvider.java#L141-L177`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L141-L177))
 
-From this collection of elements, the schema of the input collection can be obtained. This is useful for assembling our
-output collections, since their schema will be based on this schema. In the case of the successful records, the schema
-will remain unchanged (since we are modifying a single field in-place), and the error records will use a schema that
-essentially wraps the original schema with a couple error-specific fields as defined by
-<code>[errorSchema](
-https://github.com/apache/beam/blob/f4d03d49713cf89260c141ee35b4dadb31ad4193/sdks/java/core/src/main/java/org/apache/beam/sdk/schemas/transforms/providers/ErrorHandling.java#L50-L54)</code>.
+1. **Get Input PCollection:** The input arrives as a [`PCollectionRowTuple`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/PCollectionRowTuple.html), which is a map of tags to `PCollection<Row>`. Extract the main input `PCollection` using the appropriate tag (usually `"input"`).
+2. **Get Input Schema:** Obtain the schema from the input `PCollection`. This is needed to define the output schemas.
+3. **Determine Output Schemas:**
+    * The schema for successfully processed records is often the same as the input schema (unless the transform modifies the structure).
+    * The schema for error records is typically derived using [`ErrorHandling.errorSchema()`](https://github.com/apache/beam/blob/f4d03d49713cf89260c141ee35b4dadb31ad4193/sdks/java/core/src/main/java/org/apache/beam/sdk/schemas/transforms/providers/ErrorHandling.java#L50-L54), which wraps the original schema with error-specific fields.
+4. **Check Error Handling Config:** Use the `ErrorHandling` object (from the configuration) to determine if error handling is enabled and what the output tag for errors should be.
+5. **Apply the Core Logic (DoFn):** Apply a [`ParDo`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/ParDo.html) transform with a custom [`DoFn`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html). This `DoFn` performs the actual `toUpperCase` operation.
+    * It should use [`TupleTag`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/TupleTag.html)s to tag successful output and error output separately.
+    * If error handling is enabled, catch relevant exceptions (like `IllegalArgumentException` if the specified `field` doesn't exist) and output an error record using the error `TupleTag`. Otherwise, let exceptions propagate.
+6. **Set Output Schemas:** Explicitly set the schemas for both the main output and error output `PCollection`s using `.setRowSchema()`. This is crucial for cross-language compatibility.
+7. **Construct Output Tuple:** Create the final [`PCollectionRowTuple`](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/PCollectionRowTuple.html) containing the tagged output `PCollection`s.
+    * The main output is tagged `"output"`.
+    * If error handling is enabled, the error output is tagged with the name specified in the `ErrorHandling` configuration (e.g., `"errors"`).
 
-Whether to do <code>[error_handling](https://beam.apache.org/documentation/sdks/yaml-errors/)</code> is
-determined by the [ErrorHandling](
-https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/schemas/transforms/providers/ErrorHandling.html)
-class. If error handling is specified in the config of the transform in the Beam YAML pipeline, then exceptions will be
-caught and stored in an “error”-tagged output as opposed to thrown at Runtime.
+**`createDoFn()` Method:** ([`ToUpperCaseTransformProvider.java#L116-L139`](https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L116-L139))
 
-Next, the <code>[PTransform](https://beam.apache.org/documentation/programming-guide/#transforms)</code> is actually
-applied. The
-<code>[DoFn](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html)</code> will be
-detailed more below, but what is important to note here is that the output is tagged using two arbitrary
-<code>[TupleTag](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/values/TupleTag.html)</code>
-objects - one for successful records, and one for error records.
+This helper method constructs the `DoFn`. Key aspects:
 
-After the `PTransform` is applied, it is important to ensure that both output collections have their schema configured
-so that the cross-language service can encode and decode the objects back to the Beam YAML SDK.
-
-Finally, the resulting `PCollectionRowTuple` must be constructed. The successful records should be stored and tagged
-“output” regardless of if `error_handling` was specified, and if `error_handling` was specified, it can be appended to
-the same `PCollectionRowTuple `and tagged according to the output specified by the `error_handling `config in the
-Beam YAML pipeline.
-
-https://github.com/apache/beam-starter-java-provider/blob/main/src/main/java/org/example/ToUpperCaseTransformProvider.java#L116-L139
-
-Now, taking a look at the `createDoFn()` method that is responsible for constructing and returning the actual
-<code>[DoFn](https://beam.apache.org/releases/javadoc/current/org/apache/beam/sdk/transforms/DoFn.html)</code>,
-you will notice that the only thing that makes this special versus any other <code>DoFn</code> you may write, is that
-it checks to see if <code>error_handling </code>was specified, constructs an error record from the input records and
-tags those records using the arbitrary error  <code>TupleTag</code> discussed previously. Aside from that, this
-<code>DoFn</code> is simply taking the input <code>Row</code>, applying the <code>.toUpperCase()</code> method to the
-<code>field</code> within the <code>Row</code> and tagging all successful records using the arbitrary successful
-<code>TupleTag </code>also discussed previously.
-
+* It receives the configuration (including the `field` name) and the `TupleTag`s for output.
+* The `@ProcessElement` method contains the logic:
+  * Get the input `Row`.
+  * Try to access and modify the specified `field`.
+  * Use `Row.Builder` to create a new output `Row` with the modified field.
+  * Output the successful `Row` using the main output `TupleTag`.
+  * If an error occurs (e.g., field not found) and error handling is enabled, create an error `Row` (using `ErrorHandling.errorRecord()`) and output it using the error `TupleTag`.
 
 ## Building the Transform Catalog JAR
-At this point, you should have all the code as defined in the previous section ready to go, and it is now time to build
-the JAR that will be provided to the Beam YAML pipeline.
 
-From the root directory, run the following command:
+At this point, you should have the necessary Java code (`ToUpperCaseTransformProvider.java` and potentially `SkeletonSchemaProvider.java` if you started from there). Now, build the JAR file that will contain your transform and be provided to the Beam YAML pipeline.
 
-```
+From the root directory of your Maven project, run:
+
+```shell
 mvn package
 ```
 
-This will create a JAR under `target` called `xlang-transforms-bundled-1.0-SNAPSHOT.jar` that contains the
-`ToUpperCaseTransformProvider` along with its dependencies and the external transform service. The external expansion
-service is what will be invoked by the Beam YAML SDK to import the transform schema and run the expansion service for
-the transform.
+This command compiles your code and packages it into a JAR file located in the `target/` directory. By default (based on the starter `pom.xml`), the JAR will be named something like `xlang-transforms-bundled-1.0-SNAPSHOT.jar`. This "bundled" or "shaded" JAR includes your transform code, its dependencies, and the necessary components for the Beam expansion service.
 
-https://github.com/apache/beam-starter-java-provider/blob/main/pom.xml#L85-L87
-**Note:** The name of the jar is configurable using the `finalName` tag in the `maven-shade-plugin` configuration.
+**Note:** The final JAR name is configurable in your `pom.xml` within the `maven-shade-plugin` configuration using the `<finalName>` tag (see [`pom.xml#L85-L87`](https://github.com/apache/beam-starter-java-provider/blob/main/pom.xml#L85-L87)).
 
 ## Defining the Transform in Beam YAML
 
-Now that you have a JAR file that contains the transform catalog, it is time to include it as part of your Beam YAML
-pipeline. This is done using <code>[providers](https://beam.apache.org/documentation/sdks/yaml-providers)</code> -
-these providers allow one to define a suite of transforms in a given JAR or python package that can be used within the
-Beam YAML pipeline.
+Now that you have a JAR file containing your transform catalog, you can use it in a Beam YAML pipeline via the `providers` section. Providers tell Beam YAML where to find external transforms.
 
-We will be utilizing the `javaJar` provider as we are planning to keep the names of the config parameters as they are defined in the transform.
+We will use the `javaJar` provider type since our transform is in a Java JAR.
 
-For our example, that looks as follows:
 ```yaml
 providers:
   - type: javaJar
     config:
-      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
+      # Path to your built JAR file
+      jar: "target/xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
+      # Mapping: YAML transform name -> Java transform URN (from identifier())
       ToUpperCase: "some:urn:to_upper_case:v1"
-      Identity: "some:urn:transform_name:v1"
+      Identity: "some:urn:transform_name:v1" # Assuming SkeletonSchemaProvider is also included
 ```
 
-For transforms where one might want to rename the config parameters, the `renaming` provider allows us to map the transform
-parameters to alias names. Otherwise the config parameters will inherit the same name that is defined in Java, with camelCase
-being converted to snake_case. For example, errorHandling will be called `error_handling` in the YAML config. If there was a 
-parameter `table_spec`, and we wanted to call in `table` in the YAML config. We could use the `renaming` provider to map the alias.
+* `jar`: Specifies the path to the JAR file containing the transform(s). Adjust the path if necessary (e.g., if running from a different directory or if the JAR is in a central location).
+* `transforms`: Maps the desired name for the transform in your YAML file (e.g., `ToUpperCase`) to the unique URN defined in your Java `SchemaTransformProvider`'s `identifier()` method.
 
-More robust examples of the `renaming` provider can be found [here](
-https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_io.yaml).
+**Parameter Naming:** By default, the `javaJar` provider converts Java `camelCase` parameter names (from your `Configuration` class getters) to `snake_case` for use in the YAML file. For example, a `getField()` getter corresponds to a `field` parameter in YAML, and `getErrorHandling()` corresponds to `error_handling`.
 
-Now, `ToUpperCase` can be defined as a transform in the Beam YAML pipeline with the single config parameter - `field`.
+If you need different names in YAML, you can use the `renaming` provider type instead of or in addition to `javaJar`. See the [standard I/O providers](https://github.com/apache/beam/blob/master/sdks/python/apache_beam/yaml/standard_io.yaml) for examples.
 
-A full example:
+Now, `ToUpperCase` can be used like any other transform in your pipeline:
+
+**Full Example (`pipeline.yaml`):**
+
 ```yaml
 pipeline:
-  type: chain
+  type: chain # Optional: simplifies linear pipelines
   transforms:
     - type: Create
       config:
@@ -390,32 +260,35 @@ pipeline:
             id: 1
           - name: "jane"
             id: 2
-    - type: Identity
+    - type: Identity # Using the skeleton transform
+      input: Create
     - type: ToUpperCase
+      input: Identity # Input defaults to previous transform in a chain
       config:
         field: "name"
-    - type: LogForTesting
+    - type: LogForTesting # Built-in transform for logging
+      input: ToUpperCase
 
 providers:
   - type: javaJar
     config:
-      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
+      jar: "target/xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
 ```
 
-Expected logs:
-```
+**Expected Logs:**
+
+```text
 message: "{\"name\":\"JOHN\",\"id\":1}"
 message: "{\"name\":\"JANE\",\"id\":2}"
 ```
 
-**Note**: Beam YAML will choose the Java implementation of the `LogForTesting` transform to reduce language switching.
-The output can get a bit crowded, but look for the logs in the commented “Expected” section at the bottom of the YAML
-file.
+**Note:** Beam YAML might choose the Java implementation of `LogForTesting` to minimize cross-language calls, potentially making the logs verbose. Look for the specific messages shown above.
 
-An example with errors caught and handled:
+**Example with Error Handling:**
+
 ```yaml
 pipeline:
   transforms:
@@ -424,42 +297,66 @@ pipeline:
         elements:
           - name: "john"
             id: 1
-          - name: "jane"
+          - name: "jane" # This element has no 'unknown' field
             id: 2
     - type: ToUpperCase
       input: Create
       config:
-        field: "unknown"
+        field: "unknown" # This field doesn't exist
         error_handling:
-          output: errors
+          output: errors # Send errors to 'ToUpperCase.errors'
     - type: LogForTesting
-      input: ToUpperCase
+      name: LogSuccess # Give transforms unique names if type is repeated
+      input: ToUpperCase # Default output (successful records)
     - type: LogForTesting
-      input: ToUpperCase.errors
+      name: LogErrors
+      input: ToUpperCase.errors # Error output
 
 providers:
   - type: javaJar
     config:
-      jar: "xlang-transforms-bundled-1.0-SNAPSHOT.jar"
+      jar: "target/xlang-transforms-bundled-1.0-SNAPSHOT.jar"
     transforms:
       ToUpperCase: "some:urn:to_upper_case:v1"
       Identity: "some:urn:transform_name:v1"
 ```
 
-For Complete Reference on Error Handling, visit [Beam YAML Error Handling](https://beam.apache.org/documentation/sdks/yaml-errors/)
+**Expected Logs (Error Handling Example):**
+(The exact error message might vary slightly)
 
-If you have Beam Python installed, you can test this pipeline out locally with
+```text
+# From LogErrors
+message: "{\"error\":\"java.lang.IllegalArgumentException: Field not found: unknown\",\"element\":\"{\\\"name\\\":\\\"john\\\",\\\"id\\\":1}\"}"
+message: "{\"error\":\"java.lang.IllegalArgumentException: Field not found: unknown\",\"element\":\"{\\\"name\\\":\\\"jane\\\",\\\"id\\\":2}\"}"
 
+# LogSuccess will produce no output as all elements failed.
 ```
+
+For a complete reference on error handling configuration, visit [Beam YAML Error Handling](https://beam.apache.org/documentation/sdks/yaml-errors/).
+
+If you have Apache Beam for Python installed, you can test this pipeline locally:
+
+```shell
 python -m apache_beam.yaml.main --yaml_pipeline_file=pipeline.yaml
 ```
 
-or if you have gcloud installed you can run this on dataflow with
+Alternatively, if you have `gcloud` configured, you can run it on Google Cloud Dataflow:
 
-```
-gcloud dataflow yaml run $JOB_NAME --yaml-pipeline-file=pipeline.yaml --region=$REGION
+```shell
+# Ensure your JAR is accessible, e.g., in a GCS bucket
+export BUCKET_NAME=your-gcs-bucket-name
+gsutil cp target/xlang-transforms-bundled-1.0-SNAPSHOT.jar gs://$BUCKET_NAME/
+
+# Update pipeline.yaml to point to the GCS path:
+# providers:
+#  - type: javaJar
+#    config:
+#      jar: "gs://your-gcs-bucket-name/xlang-transforms-bundled-1.0-SNAPSHOT.jar"
+#    transforms: ...
+
+export JOB_NAME=my-yaml-job-$(date +%Y%m%d-%H%M%S)
+export REGION=your-gcp-region # e.g., us-central1
+gcloud dataflow yaml run $JOB_NAME --yaml-pipeline-file=pipeline.yaml --region=$REGION --staging-location=gs://$BUCKET_NAME/staging
 ```
 
-(Note in this case you will need to upload your jar to a gcs bucket or
-publish it elsewhere as a globally-accessible URL so it is available to
-the dataflow service.)
+(Note: Running on Dataflow requires the JAR to be in a location accessible by the Dataflow service, like Google Cloud Storage.)
