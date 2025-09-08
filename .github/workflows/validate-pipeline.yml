@@ -41,7 +41,7 @@ jobs:
         - name: Build with Maven
           run: mvn -B package --file pom.xml
         - name: Set up python
-          uses: actions/setup-python@v5
+          uses: actions/setup-python@v6
           with:
             python-version: '3.12'
         - name: Set up Apache Beam Yaml
